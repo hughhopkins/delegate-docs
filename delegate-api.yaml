@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: Delegate API
+  version: 0.1.0
+  description: |
+    # Authentication
+    To access protected endpoints, you'll need a Bearer token. 
+    Tokens can be obtained by contacting your account manager.
+
+    # Pagination
+    If the response includes a `nextToken`, it indicates there are more results available.
+    To retrieve the next page, include the `nextToken` in a subsequent request.
+    Continue this process until no `nextToken` is returned.
+
+paths:
+  /v1/time-series-query:
+    post:
+      summary: Execute a time-series SQL query
+      description: |
+        Provide a valid SQL query to retrieve time-series data.
+        Use `nextToken` to paginate through large result sets.
+
+        Please contact your account manager to get the correct database, table names and example queries.
+      operationId: executeTimeSeriesQuery
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: The body must include a `query` field with a valid SQL statement.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: The SQL query to execute.
+                  example: "SELECT item, AVG(CAST(score AS DOUBLE)) AS average_score FROM \"db-scores\".\"score-test\" WHERE time BETWEEN TIMESTAMP '2024-07-01 00:00:00' AND TIMESTAMP '2024-12-31 23:59:59' GROUP BY item limit 1001"
+                nextToken:
+                  type: string
+                  description: The token provided by a previous response to retrieve the next page of results (optional)
+                  example: "AYABeMp4tu6onsLbWv-ChpPm..."
+              required:
+                - query
+            example:
+              query: "SELECT item, COUNT(*) AS count FROM \"db-scores\".\"score-test\" WHERE time > TIMESTAMP '2024-08-01 00:00:00' GROUP BY item"
+      responses:
+        '200':
+          description: Successful execution of the query
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        item:
+                          type: string
+                          description: The item identifier from the query result.
+                        average_score:
+                          type: number
+                          description: The calculated average score for the item.
+                  nextToken:
+                    type: string
+                    nullable: true
+                    description: |
+                      Token to retrieve the next page of results. If present, include this token 
+                      as the `nextToken` query parameter in your next request.
+              example:
+                data: []
+                nextToken: "AYABeMp4tu6onsLbWv-ChpPm..."
+        '400':
+          description: Invalid request
+        '500':
+          description: Internal server error
+
+servers:
+  - url: https://api.usedelegate.com
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
